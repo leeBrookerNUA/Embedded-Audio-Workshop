@@ -1,0 +1,97 @@
+
+# 01 - Three sounds, each triggered by a different button
+# CircuitPython / Raspberry Pi Pico RP2040 / MAX98357A
+#
+# Buttons:
+# GP0 -> sound1.wav
+# GP1 -> sound2.wav
+# GP5 -> sound3.wav
+#
+# I2S:
+# BCLK GP2
+# LRC  GP3
+# DIN  GP4
+#
+# Place all three WAV files beside code.py on CIRCUITPY.
+
+import board
+import digitalio
+import audiobusio
+import audiocore
+import time
+
+# Set up button 1 on GP0
+button1 = digitalio.DigitalInOut(board.GP0)
+button1.switch_to_input(pull=digitalio.Pull.UP)
+
+# Set up button 2 on GP1
+button2 = digitalio.DigitalInOut(board.GP1)
+button2.switch_to_input(pull=digitalio.Pull.UP)
+
+# Set up button 3 on GP5
+button3 = digitalio.DigitalInOut(board.GP5)
+button3.switch_to_input(pull=digitalio.Pull.UP)
+
+# Set up the I2S audio connection
+audio = audiobusio.I2SOut(
+    bit_clock=board.GP2,
+    word_select=board.GP3,
+    data=board.GP4,
+)
+
+# Load the three sound files
+f1 = open("sound1.wav", "rb")
+wav1 = audiocore.WaveFile(f1)
+
+f2 = open("sound2.wav", "rb")
+wav2 = audiocore.WaveFile(f2)
+
+f3 = open("sound3.wav", "rb")
+wav3 = audiocore.WaveFile(f3)
+
+# Remember the previous state of each button
+previous1 = True
+previous2 = True
+previous3 = True
+
+# Debounce settings
+last_press = 0.0
+DEBOUNCE = 0.04
+
+# Continuously check the buttons
+while True:
+
+    current1 = button1.value
+    current2 = button2.value
+    current3 = button3.value
+
+    now = time.monotonic()
+
+    # Check for a new button press
+    if now - last_press >= DEBOUNCE:
+
+        # Button 1 pressed
+        if previous1 and not current1:
+            last_press = now
+            if not audio.playing:
+                audio.play(wav1)
+
+        # Button 2 pressed
+        elif previous2 and not current2:
+            last_press = now
+            if not audio.playing:
+                audio.play(wav2)
+
+        # Button 3 pressed
+        elif previous3 and not current3:
+            last_press = now
+            if not audio.playing:
+                audio.play(wav3)
+
+    # Update previous button states
+    previous1 = current1
+    previous2 = current2
+    previous3 = current3
+
+    # Small delay before checking again
+    time.sleep(0.005)

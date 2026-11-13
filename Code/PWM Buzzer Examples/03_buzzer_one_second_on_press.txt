@@ -1,0 +1,24 @@
+# Passive buzzer on GP1 -> GND; button GP0 -> GND
+# Each new press sounds a 440 Hz beep for one second.
+# Presses during the tone are ignored.
+import board
+import digitalio
+import pwmio
+import time
+
+button = digitalio.DigitalInOut(board.GP0)
+button.switch_to_input(pull=digitalio.Pull.UP)
+buzzer = pwmio.PWMOut(board.GP1, frequency=440, duty_cycle=0)
+previous = True
+stop_at = 0.0
+
+while True:
+    now = time.monotonic()
+    current = button.value
+    if now >= stop_at:
+        buzzer.duty_cycle = 0
+    if previous and not current and buzzer.duty_cycle == 0:
+        buzzer.duty_cycle = 32768
+        stop_at = now + 1.0
+    previous = current
+    time.sleep(0.01)

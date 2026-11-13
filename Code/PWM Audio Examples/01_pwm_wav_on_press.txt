@@ -1,0 +1,21 @@
+# Passive piezo disc on GP1 -> GND; button GP0 -> GND
+# Plays sound.wav once on a new press; ignores presses while playing.
+import board
+import digitalio
+import audiopwmio
+import audiocore
+import time
+
+button = digitalio.DigitalInOut(board.GP0)
+button.switch_to_input(pull=digitalio.Pull.UP)
+audio = audiopwmio.PWMAudioOut(board.GP1)
+previous = True
+
+with open('sound.wav', 'rb') as f:
+    wav = audiocore.WaveFile(f)
+    while True:
+        current = button.value
+        if previous and not current and not audio.playing:
+            audio.play(wav)
+        previous = current
+        time.sleep(0.01)

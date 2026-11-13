@@ -1,0 +1,40 @@
+# 02 - Restart sound.wav from the beginning on every button press
+# CircuitPython / Raspberry Pi Pico RP2040 / MAX98357A
+# Button: GP0 to GND
+# I2S: BCLK GP2, LRC GP3, DIN GP4
+# Place sound.wav beside code.py on CIRCUITPY.
+
+import board
+import digitalio
+import audiobusio
+import audiocore
+import time
+
+button = digitalio.DigitalInOut(board.GP0)
+button.switch_to_input(pull=digitalio.Pull.UP)
+
+audio = audiobusio.I2SOut(
+    bit_clock=board.GP2,
+    word_select=board.GP3,
+    data=board.GP4,
+)
+
+f = open("sound.wav", "rb")
+wav = audiocore.WaveFile(f)
+
+previous = True
+last_press = 0.0
+DEBOUNCE = 0.04
+
+while True:
+    current = button.value
+    now = time.monotonic()
+
+    if previous and not current and now - last_press >= DEBOUNCE:
+        last_press = now
+        # Playing the same sample again restarts it from the beginning.
+        audio.stop()
+        audio.play(wav)
+
+    previous = current
+    time.sleep(0.005)

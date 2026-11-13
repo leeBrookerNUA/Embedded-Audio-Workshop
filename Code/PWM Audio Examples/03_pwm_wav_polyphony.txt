@@ -1,0 +1,39 @@
+# Passive piezo disc on GP1 -> GND; button GP0 -> GND
+# Each press layers another instance of sound.wav (same physical file).
+# When all voices are busy, the next press restarts the next voice.
+# Requires CircuitPython firmware with audiopwmio AND audiomixer.
+import board
+import digitalio
+import audiopwmio
+import audiocore
+import audiomixer
+import time
+
+VOICES = 4  # Try 2, 4, then 6 if performance allows
+SAMPLE_RATE = 22050  # Must match sound.wav
+
+button = digitalio.DigitalInOut(board.GP0)
+button.switch_to_input(pull=digitalio.Pull.UP)
+audio = audiopwmio.PWMAudioOut(board.GP1)
+mixer = audiomixer.Mixer(voice_count=VOICES,
+                         sample_rate=SAMPLE_RATE,
+                         channel_count=1,
+                         bits_per_sample=16,
+                         samples_signed=True,
+                         buffer_size=2048)
+audio.play(mixer)
+# Independent file handles let voices read the same WAV independently.
+files = [open('sound.wav', 'rb') for _ in range(VOICES)]
+samples = [audiocore.WaveFile(f) for f in files]
+for voice in mixer.voice:
+    voice.level = min(0.3, 0.8 / VOICES)
+
+next_voice = 0
+previous = True
+while True:
+    current = button.value
+    if previous and not current:
+        mixer.voice[next_voice].play(samples[next_voice])
+        next_voice = (next_voice + 1) % VOICES
+    previous = current
+    time.sleep(0.01)

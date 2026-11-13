@@ -1,0 +1,32 @@
+# Passive buzzer on GP1 -> GND; button GP0 -> GND
+# Each button press plays one complete melody.
+# Further presses while the melody is playing are ignored.
+import board
+import digitalio
+import pwmio
+import time
+
+button = digitalio.DigitalInOut(board.GP0)
+button.switch_to_input(pull=digitalio.Pull.UP)
+buzzer = pwmio.PWMOut(board.GP1, frequency=440,
+                       duty_cycle=0, variable_frequency=True)
+MELODY = [(262, 0.22), (330, 0.22), (392, 0.22),
+          (523, 0.40), (392, 0.22), (330, 0.35)]
+previous = True
+
+while True:
+    current = button.value
+    if previous and not current:
+        for frequency, duration in MELODY:
+            buzzer.frequency = frequency
+            buzzer.duty_cycle = 32768
+            time.sleep(duration)
+            buzzer.duty_cycle = 0
+            time.sleep(0.04)
+        # A held button will not start another melody.
+        # Wait for release before re-arming.
+        while not button.value:
+            time.sleep(0.01)
+        current = True
+    previous = current
+    time.sleep(0.01)
